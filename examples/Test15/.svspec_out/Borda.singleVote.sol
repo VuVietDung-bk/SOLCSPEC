@@ -19,6 +19,8 @@ contract Borda is IBorda{
 
     /// @notice precondition forall (address extraVar0) _points[extraVar0] >= 0
     /// @notice precondition pointsOfWinner >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition _voted[msg.sender]
     /// @notice postcondition false
     function vote(address f, address s, address t) public override {
@@ -41,18 +43,24 @@ contract Borda is IBorda{
 
     /// @notice precondition forall (address extraVar0) _points[extraVar0] >= 0
     /// @notice precondition pointsOfWinner >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     function winner() external view override returns (address) {
         return _winner;
     }
 
     /// @notice precondition forall (address extraVar0) _points[extraVar0] >= 0
     /// @notice precondition pointsOfWinner >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     function points(address c) public view override returns (uint256) {
         return _points[c];
     }
 
     /// @notice precondition forall (address extraVar0) _points[extraVar0] >= 0
     /// @notice precondition pointsOfWinner >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     function voted(address x) public view override returns(bool) {
         return _voted[x];
     }

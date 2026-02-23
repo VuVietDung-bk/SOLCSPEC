@@ -12,6 +12,8 @@ contract C {
         require(x >= y); // Ensures that there is no overflow
     }
 
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice modifies x if n > 0
     /// @notice modifies y if n > 0
     function add(int n) public {

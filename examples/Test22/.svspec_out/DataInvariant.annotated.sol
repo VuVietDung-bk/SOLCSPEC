@@ -15,6 +15,8 @@ contract DataInvariant {
      * @notice Decreases the address's balance by 2*value and then partially restores it, 
      * potentially leaving it negative if `balance[a]` wasn't large enough.
      */
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     function breakInvariant(address a, int256 value) external returns (bool accessInv) {
         require(value >= 0, "Value must be nonnegative");
         balance[a] -= 2 * value;      // Force a large negative change

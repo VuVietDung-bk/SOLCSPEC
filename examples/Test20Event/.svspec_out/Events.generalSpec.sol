@@ -13,14 +13,16 @@ contract Registry{
 
     mapping(address=>Entry) entries;
 
-    /// @notice precondition !entries[at].set
+    /// @notice precondition (!entries[at].set)
     /// @notice postcondition entries[at].set && entries[at].data == value
     event new_entry(address at, int value);
 
-    /// @notice precondition entries[at].set && entries[at].data < value
+    /// @notice precondition (entries[at].set && entries[at].data < value)
     /// @notice postcondition entries[at].set && entries[at].data == value
     event updated_entry(address at, int value);
 
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice emits new_entry
     function add(int value) public {
         require(!entries[msg.sender].set);
@@ -29,6 +31,8 @@ contract Registry{
         emit new_entry(msg.sender, value);
     }
 
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice emits updated_entry
     function update(int value) public {
         require(entries[msg.sender].set);
@@ -37,6 +41,8 @@ contract Registry{
         emit updated_entry(msg.sender, value);
     }
 
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice emits new_entry
     /// @notice emits updated_entry
     function add_or_update(int value) public {

@@ -15,6 +15,8 @@ contract SortedArray {
      * @param val The value to insert
      */
     /// @notice precondition property(arr) (extraIndex0) arr[extraIndex0] >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition val >= 0
     function insert(uint256 val) external {
         // Simple linear approach:
@@ -38,6 +40,8 @@ contract SortedArray {
      * @dev For simplicity, just shift down from 'index' onward; last element is pop'd.
      */
     /// @notice precondition property(arr) (extraIndex0) arr[extraIndex0] >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition index >= 0
     function remove(uint256 index) external {
         require(index < arr.length, "Index out of range");
@@ -52,6 +56,8 @@ contract SortedArray {
      * @dev Exposes array reads to demonstrate the read hook in CVL.
      */
     /// @notice precondition property(arr) (extraIndex0) arr[extraIndex0] >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition index >= 0
     function readAt(uint256 index) external view returns (uint256) {
         return arr[index];

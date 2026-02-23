@@ -52,6 +52,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice postcondition forall (address spender) forall (address holder) _allowances[holder][spender] <= __verifier_old_uint(_allowances[holder][spender]) || msg.sender == holder
     constructor() {
     }
@@ -67,6 +69,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice postcondition forall (address spender) forall (address holder) _allowances[holder][spender] <= __verifier_old_uint(_allowances[holder][spender]) || msg.sender == holder
     function name() public view virtual override returns (string memory) {
         return "name";
@@ -79,6 +83,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice postcondition forall (address spender) forall (address holder) _allowances[holder][spender] <= __verifier_old_uint(_allowances[holder][spender]) || msg.sender == holder
     function symbol() public view virtual override returns (string memory) {
         return "symbol";
@@ -100,6 +106,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice postcondition forall (address spender) forall (address holder) _allowances[holder][spender] <= __verifier_old_uint(_allowances[holder][spender]) || msg.sender == holder
     function decimals() public view virtual override returns (uint8) {
         return 18;
@@ -111,6 +119,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice postcondition forall (address spender) forall (address holder) _allowances[holder][spender] <= __verifier_old_uint(_allowances[holder][spender]) || msg.sender == holder
     function totalSupply() public view virtual override returns (uint256) {
         return _totalSupply;
@@ -122,6 +132,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice postcondition forall (address spender) forall (address holder) _allowances[holder][spender] <= __verifier_old_uint(_allowances[holder][spender]) || msg.sender == holder
     function balanceOf(address account)
         public
@@ -144,6 +156,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition amount >= 0
     /// @notice postcondition forall (address spender) forall (address holder) _allowances[holder][spender] <= __verifier_old_uint(_allowances[holder][spender]) || msg.sender == holder
     function transfer(address recipient, uint256 amount)
@@ -162,6 +176,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice postcondition forall (address spender) forall (address holder) _allowances[holder][spender] <= __verifier_old_uint(_allowances[holder][spender]) || msg.sender == holder
     function allowance(address owner, address spender)
         public
@@ -183,6 +199,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition amount >= 0
     /// @notice postcondition forall (address spender) forall (address holder) _allowances[holder][spender] <= __verifier_old_uint(_allowances[holder][spender]) || msg.sender == holder
     function approve(address spender, uint256 amount)
@@ -211,6 +229,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition amount >= 0
     /// @notice postcondition forall (address spender) forall (address holder) _allowances[holder][spender] <= __verifier_old_uint(_allowances[holder][spender]) || msg.sender == holder
     function transferFrom(
@@ -245,6 +265,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition addedValue >= 0
     /// @notice postcondition forall (address spender) forall (address holder) _allowances[holder][spender] <= __verifier_old_uint(_allowances[holder][spender]) || msg.sender == holder
     function increaseAllowance(address spender, uint256 addedValue)
@@ -277,6 +299,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition subtractedValue >= 0
     /// @notice postcondition forall (address spender) forall (address holder) _allowances[holder][spender] <= __verifier_old_uint(_allowances[holder][spender]) || msg.sender == holder
     function decreaseAllowance(address spender, uint256 subtractedValue)
@@ -340,6 +364,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition amount >= 0
     /// @notice postcondition forall (address spender) forall (address holder) _allowances[holder][spender] <= __verifier_old_uint(_allowances[holder][spender]) || msg.sender == holder
     function mint(address account, uint256 amount) onlyOwner() public virtual override {
@@ -368,6 +394,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition amount >= 0
     /// @notice postcondition forall (address spender) forall (address holder) _allowances[holder][spender] <= __verifier_old_uint(_allowances[holder][spender]) || msg.sender == holder
     function burn(address account, uint256 amount) onlyOwner() public virtual override {
@@ -452,6 +480,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition msg.value >= 0
     /// @notice precondition address(this).balance >= 0
     /// @notice precondition forall (address addr2005) addr2005.balance >= 0
@@ -463,6 +493,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition amount >= 0
     /// @notice postcondition forall (address spender) forall (address holder) _allowances[holder][spender] <= __verifier_old_uint(_allowances[holder][spender]) || msg.sender == holder
     function withdraw(uint256 amount) external {

@@ -21,6 +21,8 @@ contract BallGame {
 
     /// Initialize the ball position to 1
     /// @notice precondition ballPosition >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     constructor() {
         ballPosition = 1;
     }
@@ -30,6 +32,8 @@ contract BallGame {
     ///   - player 3 will pass to player 1
     ///   - everyone else will pass to player 2
     /// @notice precondition ballPosition >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     function pass() external {
         if (ballPosition == 1)
             ballPosition = 3;

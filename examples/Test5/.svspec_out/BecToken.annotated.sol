@@ -40,6 +40,8 @@ contract BecToken {
 
     /// @notice precondition totalSupply >= 0
     /// @notice precondition forall (address extraVar0) balances[extraVar0] >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     constructor() {
         totalSupply = 7000000000 * (10**18);
         balances[msg.sender] = totalSupply; // Give the creator all initial tokens
@@ -47,12 +49,16 @@ contract BecToken {
 
     /// @notice precondition totalSupply >= 0
     /// @notice precondition forall (address extraVar0) balances[extraVar0] >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     function balanceOf(address _owner) public view returns (uint256 balance) {
         return balances[_owner];
     }
 
     /// @notice precondition totalSupply >= 0
     /// @notice precondition forall (address extraVar0) balances[extraVar0] >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition _value >= 0
     function transfer(address _receiver, uint256 _value) public returns (bool) {
         require(_value > 0 && balances[msg.sender] >= _value);
@@ -64,6 +70,8 @@ contract BecToken {
 
     /// @notice precondition totalSupply >= 0
     /// @notice precondition forall (address extraVar0) balances[extraVar0] >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition _value >= 0
     function batchTransfer(address[] memory _receivers, uint256 _value) public returns (bool) {
         uint cnt = _receivers.length;

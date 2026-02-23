@@ -6,6 +6,8 @@ contract SimpleBank {
     mapping(address=>uint) balances;
 
     /// @notice precondition forall (address extraVar0) balances[extraVar0] >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition msg.value >= 0
     /// @notice precondition address(this).balance >= 0
     /// @notice precondition forall (address addr2005) addr2005.balance >= 0
@@ -14,6 +16,8 @@ contract SimpleBank {
     }
 
     /// @notice precondition forall (address extraVar0) balances[extraVar0] >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition amount >= 0
     function withdraw(uint256 amount) public {
         require(balances[msg.sender] > amount);

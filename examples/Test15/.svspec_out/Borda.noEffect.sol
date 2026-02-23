@@ -19,6 +19,8 @@ contract Borda is IBorda{
 
     /// @notice precondition forall (address extraVar0) _points[extraVar0] >= 0
     /// @notice precondition pointsOfWinner >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition !true
     /// @notice postcondition forall (address t) forall (address s) forall (address f) forall (address c) c == f || c == s || c == t || (_voted[c] == __verifier_old_bool(_voted[c]) || c == msg.sender) && _points[c] == __verifier_old_uint(_points[c])
     function vote(address f, address s, address t) public override {
@@ -41,6 +43,8 @@ contract Borda is IBorda{
 
     /// @notice precondition forall (address extraVar0) _points[extraVar0] >= 0
     /// @notice precondition pointsOfWinner >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition !false
     /// @notice postcondition forall (address c) (_voted[c] == __verifier_old_bool(_voted[c]) || c == msg.sender) && _points[c] == __verifier_old_uint(_points[c])
     function winner() external view override returns (address) {
@@ -49,6 +53,8 @@ contract Borda is IBorda{
 
     /// @notice precondition forall (address extraVar0) _points[extraVar0] >= 0
     /// @notice precondition pointsOfWinner >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition !false
     /// @notice postcondition forall (address c) (_voted[c] == __verifier_old_bool(_voted[c]) || c == msg.sender) && _points[c] == __verifier_old_uint(_points[c])
     function points(address c) public view override returns (uint256) {
@@ -57,6 +63,8 @@ contract Borda is IBorda{
 
     /// @notice precondition forall (address extraVar0) _points[extraVar0] >= 0
     /// @notice precondition pointsOfWinner >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition !false
     /// @notice postcondition forall (address c) (_voted[c] == __verifier_old_bool(_voted[c]) || c == msg.sender) && _points[c] == __verifier_old_uint(_points[c])
     function voted(address x) public view override returns(bool) {

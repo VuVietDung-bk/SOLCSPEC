@@ -13,11 +13,15 @@ contract Storage {
     mapping(address=>Record) records;
     address owner;
 
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     constructor() {
         owner = msg.sender;
     }
 
     // Only owner can change the owner
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     function changeOwner(address newOwner) public {
         require(msg.sender == owner);
         owner = newOwner;
@@ -27,12 +31,16 @@ contract Storage {
         return record.set;
     }
 
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     function set(int data) public {
         require(!isSet(records[msg.sender]));
         Record memory rec = Record(data, true);
         records[msg.sender] = rec;
     }
 
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice postcondition records[msg.sender].data == data
     /// @notice modifies records[msg.sender].data if records[msg.sender].set
     function update(int data) public {
@@ -42,6 +50,8 @@ contract Storage {
     }
 
     // Anyone can modify their record, but owner can modify any record
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     function clear(address at) public {
         require(msg.sender == owner || msg.sender == at);
         Record storage rec = records[at];

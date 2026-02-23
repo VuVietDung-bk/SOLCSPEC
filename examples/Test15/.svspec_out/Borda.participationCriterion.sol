@@ -19,10 +19,12 @@ contract Borda is IBorda{
 
     /// @notice precondition forall (address extraVar0) _points[extraVar0] >= 0
     /// @notice precondition pointsOfWinner >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition _points[_winner] >= _points[f]
     /// @notice precondition _points[_winner] >= _points[s]
     /// @notice precondition _points[_winner] >= _points[t]
-    /// @notice postcondition _winner != f || _winner == f
+    /// @notice postcondition __verifier_old_address(_winner) != f || _winner == f
     function vote(address f, address s, address t) public override {
         require(!_voted[msg.sender], "this voter has already cast its vote");
         require( f != s && f != t && s != t, "candidates are not different");
@@ -43,18 +45,24 @@ contract Borda is IBorda{
 
     /// @notice precondition forall (address extraVar0) _points[extraVar0] >= 0
     /// @notice precondition pointsOfWinner >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     function winner() external view override returns (address) {
         return _winner;
     }
 
     /// @notice precondition forall (address extraVar0) _points[extraVar0] >= 0
     /// @notice precondition pointsOfWinner >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     function points(address c) public view override returns (uint256) {
         return _points[c];
     }
 
     /// @notice precondition forall (address extraVar0) _points[extraVar0] >= 0
     /// @notice precondition pointsOfWinner >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     function voted(address x) public view override returns(bool) {
         return _voted[x];
     }

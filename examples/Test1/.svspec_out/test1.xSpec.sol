@@ -7,6 +7,8 @@ contract Example1 {
 
     /// @notice precondition x >= 0
     /// @notice precondition y >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition n >= 0
     /// @notice postcondition __verifier_old_uint(x) <= x
     function add_to_x(uint n) external {
@@ -22,6 +24,8 @@ contract Example1 {
     
     /// @notice precondition x >= 0
     /// @notice precondition y >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition n >= 0
     function add_to_y(uint n) external {
         y = y + n;

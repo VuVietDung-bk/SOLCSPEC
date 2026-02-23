@@ -8,6 +8,8 @@ contract Example3 {
 
     /// @notice precondition x >= 0
     /// @notice precondition y >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition n >= 0
     /// @notice postcondition isSet[x]
     function setNextIndex(uint n) external {

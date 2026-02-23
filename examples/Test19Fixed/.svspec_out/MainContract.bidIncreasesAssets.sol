@@ -7,11 +7,13 @@ contract MainContract
     uint256 public currentBid;
 
     /// @notice precondition currentBid >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition msg.value >= 0
     /// @notice precondition address(this).balance >= 0
     /// @notice precondition forall (address addr2005) addr2005.balance >= 0
-    /// @notice precondition msg.sender != address(this)
-    /// @notice precondition msg.value > currentBid
+    /// @notice precondition (msg.sender != address(this))
+    /// @notice precondition (msg.value > currentBid)
     /// @notice postcondition address(this).balance > __verifier_old_uint(address(this).balance)
     function bid() public payable
     {

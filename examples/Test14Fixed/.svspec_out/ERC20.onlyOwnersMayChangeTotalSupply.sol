@@ -54,6 +54,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice postcondition _totalSupply == __verifier_old_uint(_totalSupply) || msg.sender == _owner
     constructor(string memory name_, string memory symbol_) {
         _name = name_;
@@ -71,6 +73,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice postcondition _totalSupply == __verifier_old_uint(_totalSupply) || msg.sender == _owner
     function name() public view virtual override returns (string memory) {
         return _name;
@@ -83,6 +87,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice postcondition _totalSupply == __verifier_old_uint(_totalSupply) || msg.sender == _owner
     function symbol() public view virtual override returns (string memory) {
         return _symbol;
@@ -104,6 +110,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice postcondition _totalSupply == __verifier_old_uint(_totalSupply) || msg.sender == _owner
     function decimals() public view virtual override returns (uint8) {
         return 18;
@@ -115,6 +123,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice postcondition _totalSupply == __verifier_old_uint(_totalSupply) || msg.sender == _owner
     function totalSupply() public view virtual override returns (uint256) {
         return _totalSupply;
@@ -126,6 +136,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice postcondition _totalSupply == __verifier_old_uint(_totalSupply) || msg.sender == _owner
     function balanceOf(address account)
         public
@@ -148,6 +160,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition amount >= 0
     /// @notice postcondition _totalSupply == __verifier_old_uint(_totalSupply) || msg.sender == _owner
     function transfer(address recipient, uint256 amount)
@@ -166,6 +180,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice postcondition _totalSupply == __verifier_old_uint(_totalSupply) || msg.sender == _owner
     function allowance(address owner, address spender)
         public
@@ -187,6 +203,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition amount >= 0
     /// @notice postcondition _totalSupply == __verifier_old_uint(_totalSupply) || msg.sender == _owner
     function approve(address spender, uint256 amount)
@@ -215,6 +233,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition amount >= 0
     /// @notice postcondition _totalSupply == __verifier_old_uint(_totalSupply) || msg.sender == _owner
     function transferFrom(
@@ -249,6 +269,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition addedValue >= 0
     /// @notice postcondition _totalSupply == __verifier_old_uint(_totalSupply) || msg.sender == _owner
     function increaseAllowance(address spender, uint256 addedValue)
@@ -281,6 +303,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition subtractedValue >= 0
     /// @notice postcondition _totalSupply == __verifier_old_uint(_totalSupply) || msg.sender == _owner
     function decreaseAllowance(address spender, uint256 subtractedValue)
@@ -347,6 +371,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition amount >= 0
     /// @notice postcondition _totalSupply == __verifier_old_uint(_totalSupply) || msg.sender == _owner
     function mint(address account, uint256 amount) onlyOwner() public virtual override {
@@ -375,6 +401,8 @@ contract ERC20 is IERC20, IERC20Metadata {
     /// @notice precondition forall (address extraVar0) _balances[extraVar0] >= 0
     /// @notice precondition forall (address extraVar0) forall (address extraVar1) _allowances[extraVar0][extraVar1] >= 0
     /// @notice precondition _totalSupply >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition amount >= 0
     /// @notice postcondition _totalSupply == __verifier_old_uint(_totalSupply) || msg.sender == _owner
     function burn(address account, uint256 amount) onlyOwner() public virtual override {

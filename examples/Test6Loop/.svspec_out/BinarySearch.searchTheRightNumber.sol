@@ -7,6 +7,8 @@ contract BinarySearch {
     uint[] a;
 
     /// @notice precondition property(a) (extraIndex0) a[extraIndex0] >= 0
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
     /// @notice precondition _elem >= 0
     /// @notice postcondition forall (uint n) forall (uint i) a[i] != n || i == index
     function find(uint _elem) public view returns (uint index) {
