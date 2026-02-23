@@ -459,6 +459,19 @@ def fmt(node):
             items.append(f".{t}")
         return "".join(items), 100
     
+    # Handle parenthesized expressions - preserve parentheses
+    if node.data == "exprs":
+        if len(node.children) == 1:
+            inner_txt, inner_prec = fmt(node.children[0])
+            return f"({inner_txt})", 100  # Parenthesized expr has highest precedence
+        else:
+            # Multiple children (e.g., function args) - just format without parens
+            parts = []
+            for c in node.children:
+                t, _ = fmt(c)
+                parts.append(t)
+            return ", ".join(parts), 100
+    
     if node.data == "logic_bi_expr":
         left = node.children[0]
         op_node = node.children[1]
