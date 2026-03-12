@@ -1,0 +1,714 @@
+\subsection{Translation to Annotations}
+\label{sec:translation}
+
+The core contribution of \textsc{solcspec} is the automated translation of high-level specification rules and invariants into low-level \textsc{solc-verify} annotations embedded in Solidity source files. This section formalizes the translation algorithm and describes how the tool handles variable tracking, branching, parametric rules, and quantification of free variables.
+
+The goal of the translation is to reduce each specification rule and invariant into a set of annotation primitives, preserving semantic equivalence. \textsc{solc-verify} accepts verification conditions as structured Solidity comments: \texttt{/// @notice precondition~$P$} and \texttt{/// @notice postcondition~$Q$} attach pre/postconditions to a function; \texttt{/// @notice modifies~$x$~if~$C$} constrains which state variables a function may write; \texttt{/// @notice emits~$e$} asserts that a function emits event $e$; and \texttt{/// @notice invariant~$P$} placed before a contract declaration asserts that $P$ holds at entry and exit of every function.
+
+\subsubsection{Rule Normal Form}
+
+A rule in \textsc{solcspec} consists of a sequence of \texttt{require}, variable definition/assignment, function call, and \texttt{assert} statements. Every rule can be normalized into the following canonical form:
+
+\begin{equation}
+\label{eq:rule-normal-form}
+\textbf{require } P;\quad f(\vec{a});\quad \textbf{assert } Q;
+\end{equation}
+
+\noindent where $P = \bigwedge_{i=1}^{m} P_i$ is the conjunction of all preconditions, $f(\vec{a})$ is the single function call with arguments $\vec{a}$, and $Q = \bigwedge_{j=1}^{n} Q_j$ is the conjunction of all postconditions. The restriction to a single function call per execution path is enforced syntactically by the parser; branching constructs (Section~\ref{sec:branching}) allow multiple functions to be addressed within a single rule by generating multiple paths.
+
+\subsubsection{State Variable Tracking}
+\label{sec:state-tracking}
+
+The translation must distinguish three classes of variables that can appear in rule expressions:
+
+\begin{enumerate}
+    \item \textbf{Contract state variables} ($\mathcal{S}$): declared in the \texttt{variables} block of the specification (e.g., \texttt{mapping(address => uint) \_balances}). These correspond to actual storage variables in the Solidity contract.
+    
+    \item \textbf{Ghost variables} ($\mathcal{G}$): locally defined within a rule via \texttt{define} or \texttt{assign} statements (e.g., \texttt{uint balance\_before = \_balances[msg.sender]}). These serve as snapshots of contract state at specific program points.
+    
+    \item \textbf{Rule parameters} ($\mathcal{P}$): declared in the rule signature (e.g., \texttt{address recipient, uint amount}). These may correspond to function parameters or may be free variables requiring quantification.
+\end{enumerate}
+
+The translator maintains a value map $\sigma: \mathcal{G} \cup \mathcal{P} \to \textit{Expr}$ that tracks the symbolic value of each ghost variable and rule parameter at each program point. When a ghost variable $n$ is defined as $n \coloneqq E$, the map is updated as $\sigma[n] \mapsto E[\sigma]$, where $E[\sigma]$ denotes the expression $E$ with all previously bound variables substituted according to $\sigma$.
+
+\subsubsection{Translation Rules}
+\label{sec:translation-rules}
+
+We now present the formal translation rules. Let $\mathcal{V}$ denote the set of declared contract state variables, and let $\sigma$ be the current value map.
+
+\paragraph{Case 1: State-only expressions.}
+When $P$ and $Q$ contain only contract state variables (i.e., $\text{FV}(P) \cup \text{FV}(Q) \subseteq \mathcal{S}$), each specification pattern maps directly to precondition, postcondition, or modifies annotations on function $f$, as shown in Table~\ref{tab:case1}.
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.5}
+\caption{Translation rules for state-only expressions (Case 1).}
+\label{tab:case1}
+\begin{tabular}{|p{6cm}|p{6cm}|}
+\hline
+\textbf{Specification Code} & \textbf{Generated Annotation (on function \texttt{f})} \\ \hline
+\begin{tabular}[t]{@{}l@{}}
+$\textbf{require } P;$\\
+$f();$\\
+$\textbf{assert } Q;$
+\end{tabular}
+&
+\begin{tabular}[t]{@{}l@{}}
+\texttt{/// @notice precondition P}\\
+\texttt{/// @notice postcondition Q}\\
+\texttt{function f(...) \{...\}}
+\end{tabular}
+\\ \hline
+\begin{tabular}[t]{@{}l@{}}
+$\textbf{require } P;$\\
+$f();$\\
+$\textbf{assert\_revert if } R;$
+\end{tabular}
+&
+\begin{tabular}[t]{@{}l@{}}
+\texttt{/// @notice precondition P \&\& R}\\
+\texttt{/// @notice postcondition false}\\
+\texttt{function f(...) \{...\}}
+\end{tabular}
+\\ \hline
+\begin{tabular}[t]{@{}l@{}}
+$\textbf{require } P;$\\
+$f();$\\
+$\textbf{assert\_modify } x \textbf{ if } M;$
+\end{tabular}
+&
+\begin{tabular}[t]{@{}l@{}}
+\texttt{/// @notice precondition P}\\
+\texttt{/// @notice modifies x if M}\\
+\texttt{function f(...) \{...\}}
+\end{tabular}
+\\ \hline
+\end{tabular}
+\end{table}
+
+\paragraph{Case 2: Ghost variables with deterministic values.}
+When a ghost variable $n \in \mathcal{G}$ has a value $\sigma(n) = E$ expressible purely in terms of state variables and constants, the translator substitutes $n$ before generating annotations.
+
+Let $\textsf{eval}(n) = \sigma(n)$ denote the pre-call value and $\textsf{eval\_post}(n)$ denote the same expression with each state variable $x$ replaced by $\texttt{\_\_verifier\_old\_}\langle\tau(x)\rangle(x)$, where $\tau(x)$ is the type category of $x$ (\texttt{uint}, \texttt{int}, \texttt{bytes}, \texttt{bool}, or \texttt{address}). Table~\ref{tab:case2} summarises the resulting annotation for each position.
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.5}
+\caption{Translation rules for ghost variables with deterministic values (Case 2).}
+\label{tab:case2}
+\begin{tabular}{|p{6cm}|p{6cm}|}
+\hline
+\textbf{Ghost Variable Usage} & \textbf{Generated Annotation (on function \texttt{f})} \\ \hline
+\begin{tabular}[t]{@{}l@{}}
+$\textbf{require } P[n];$\\
+$f();$\\
+where $n \coloneqq E$, $E \subseteq \mathcal{S}$
+\end{tabular}
+&
+\begin{tabular}[t]{@{}l@{}}
+\texttt{/// @notice precondition P[n:=E]}\\
+\texttt{function f(...) \{...\}}
+\end{tabular}
+\\ \hline
+\begin{tabular}[t]{@{}l@{}}
+$n \coloneqq E;\; f();$\\
+$\textbf{assert } Q[n];$\\
+where $E \subseteq \mathcal{S}$
+\end{tabular}
+&
+\begin{tabular}[t]{@{}l@{}}
+\texttt{/// @notice postcondition}\\
+\texttt{\ \ Q[n:=\_\_verifier\_old\_}\textlangle$\tau$\textrangle\texttt{(E)]}\\
+\texttt{function f(...) \{...\}}
+\end{tabular}
+\\ \hline
+\end{tabular}
+\end{table}
+
+\noindent The $\textsf{eval\_post}$ transformation is critical: ghost variables defined \emph{before} the function call capture pre-call state, so their occurrences in postconditions must reference old values. For instance, given:
+
+\begin{lstlisting}[language=Solidity,basicstyle=\small\ttfamily]
+uint xBefore = x;
+f();
+assert xBefore <= x;
+\end{lstlisting}
+
+\noindent the ghost variable \texttt{xBefore} is bound to \texttt{x} pre-call, so the postcondition becomes 
+
+\noindent \texttt{\_\_verifier\_old\_uint(x) <= x}.
+
+Figure~\ref{fig:ghost-example} shows this transformation applied to the \texttt{xSpec} rule from the \textsc{solcspec} test suite. The rule captures the value of state variable \texttt{x} before the call to \texttt{add\_to\_x} and asserts that \texttt{x} does not decrease.
+
+\begin{figure}[h]
+\centering
+\begin{minipage}{0.47\textwidth}
+\begin{lstlisting}[style=solstyle]
+variables { uint x; }
+
+rule xSpec(uint n) {
+    uint xBefore = x;
+    add_to_x(n);
+    assert xBefore <= x;
+}
+\end{lstlisting}
+\end{minipage}
+\hfill
+\begin{minipage}{0.47\textwidth}
+\begin{lstlisting}[style=solstyle]
+/// @notice precondition n >= 0
+/// @notice postcondition
+///   __verifier_old_uint(x) <= x
+function add_to_x(int n) internal { ... }
+\end{lstlisting}
+\end{minipage}
+\caption{Ghost variable oldification: \texttt{xBefore} (bound to \texttt{x} before the call) is replaced in the postcondition by \texttt{\_\_verifier\_old\_uint(x)}, referencing the pre-call value of \texttt{x}.}
+\label{fig:ghost-example}
+\end{figure}
+
+\paragraph{Case 3: Free variables (quantification).}
+When a rule parameter $n \in \mathcal{P}$ has no deterministic value ($\sigma(n) = \bot$), the translator introduces universal quantification. Table~\ref{tab:case3} enumerates all three cases depending on where the free variable $n$ appears.
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.5}
+\caption{Translation rules for free variables requiring quantification (Case 3).}
+\label{tab:case3}
+\begin{tabular}{|p{6cm}|p{6cm}|}
+\hline
+\textbf{Specification Code} & \textbf{Generated Annotation (on function \texttt{f})} \\ \hline
+\begin{tabular}[t]{@{}l@{}}
+$\textbf{require } P;\; f();\; \textbf{assert } Q;$\\
+where $n \in \text{FV}(P) \cap \text{FV}(Q)$
+\end{tabular}
+&
+\begin{tabular}[t]{@{}l@{}}
+\texttt{/// @notice postcondition}\\
+\texttt{\ \ forall (\(\tau(n)\) n)}\\
+\texttt{\ \ !}\(\hat{P}\)\texttt{ || Q}\\
+\texttt{function f(...) \{...\}}
+\end{tabular}
+\\ \hline
+\begin{tabular}[t]{@{}l@{}}
+$\textbf{require } P;\; f();\; \textbf{assert } Q;$\\
+where $n \in \text{FV}(P) \setminus \text{FV}(Q)$
+\end{tabular}
+&
+\begin{tabular}[t]{@{}l@{}}
+\texttt{/// @notice postcondition Q}\\
+\texttt{function f(...) \{...\}}
+\end{tabular}
+\\ \hline
+\begin{tabular}[t]{@{}l@{}}
+$f();\; \textbf{assert } Q;$\\
+where $n \in \text{FV}(Q)$, no precondition on $n$
+\end{tabular}
+&
+\begin{tabular}[t]{@{}l@{}}
+\texttt{/// @notice postcondition}\\
+\texttt{\ \ forall (\(\tau(n)\) n) Q}\\
+\texttt{function f(...) \{...\}}
+\end{tabular}
+\\ \hline
+\end{tabular}
+\end{table}
+
+\noindent In Row~1 of Table~\ref{tab:case3}, $\hat{P}$ denotes the \emph{oldified} precondition, where each state variable $x$ is wrapped as $\texttt{\_\_verifier\_old\_}\langle\tau(x)\rangle(x)$. The precondition and postcondition are fused into a single quantified implication: $\forall\, n.\; \neg\hat{P} \lor Q$. In Row~2, if the free variable appears only in the precondition, that precondition is vacuously true for some values and is therefore dropped to avoid unsoundness.
+
+Figure~\ref{fig:free-var-example} illustrates Row~1 of Table~\ref{tab:case3} with a concrete rule. The rule checks that a \texttt{transfer} call does not affect any account not involved in the transaction. The free variable \texttt{thirdParty} appears in both the precondition (\texttt{require}) and the postcondition (\texttt{assert}), so the translator fuses them into a single universally quantified implication.
+
+\begin{figure}[h]
+\centering
+\begin{minipage}{0.47\textwidth}
+\begin{lstlisting}[style=solstyle]
+variables {
+    mapping(address => uint) _balances;
+}
+rule noThirdPartyEffect(
+        address from, address to,
+        address thirdParty, uint amount) {
+    require thirdParty != from
+         && thirdParty != to;
+    uint thirdBefore = _balances[thirdParty];
+    transfer(to, amount);
+    assert _balances[thirdParty]
+        == thirdBefore;
+}
+\end{lstlisting}
+\end{minipage}
+\hfill
+\begin{minipage}{0.47\textwidth}
+\begin{lstlisting}[style=solstyle]
+/// @notice postcondition
+///   forall (address thirdParty)
+///   thirdParty == from
+///   || thirdParty == to
+///   || _balances[thirdParty]
+///      == __verifier_old_uint(
+///           _balances[thirdParty])
+function transfer(address to,
+    uint256 amount) public { ... }
+\end{lstlisting}
+\end{minipage}
+\caption{Free variable quantification (Row~1 of Table~\ref{tab:case3}): \texttt{thirdParty} appears in both the precondition and the postcondition. The translator oldifies the precondition and fuses it with the postcondition into a universally quantified implication $\forall\,\mathtt{thirdParty}.\;\neg\hat{P} \lor Q$.}
+\label{fig:free-var-example}
+\end{figure}
+
+\subsubsection{Branching and Multi-function Rules}
+\label{sec:branching}
+
+A single rule may verify properties of multiple functions using conditional branching. The translator handles this by enumerating all execution paths through the rule.
+
+\paragraph{If-else decomposition.}
+An if-else statement
+\[
+\textbf{if}(C)\; \{S_1\}\; \textbf{else}\; \{S_2\}
+\]
+is decomposed into two independent paths via depth-first traversal:
+\begin{align*}
+\text{Path}_1 &= [\textbf{require } C] \cdot S_1 \\
+\text{Path}_2 &= [\textbf{require } \neg C] \cdot S_2
+\end{align*}
+Nested if-else constructs produce an exponential (in nesting depth) number of paths, each processed independently through the translation pipeline. Each path must contain exactly one function call; paths without a call produce no annotations.
+
+\paragraph{Parametric rules and anonymous functions.}
+\textsc{solcspec} supports \emph{parametric rules} that apply a property across all public state-modifying functions. The rule declares a method-typed parameter (e.g., \texttt{method f}) and uses \texttt{funcCompare} predicates to dispatch:
+
+\begin{lstlisting}[language=Solidity,basicstyle=\small\ttfamily]
+method f;
+require !funcCompare(f, "transfer");
+f();
+assert balance > 0;
+\end{lstlisting}
+
+\noindent During translation, the anonymous call \texttt{f()} is expanded to every public non-view function in the target contract. For each candidate function $g$, the \texttt{funcCompare} predicates are evaluated: $\texttt{funcCompare}(f, \texttt{"transfer"})$ becomes \texttt{true} if $g = \texttt{transfer}$ and \texttt{false} otherwise. If any precondition evaluates to \texttt{false} (e.g., \texttt{require false}), the function is skipped---no annotations are generated for it. If a \texttt{funcCompare} evaluates to \texttt{true} within a precondition and is redundant, it is simplified away.
+
+Figure~\ref{fig:parametric-expansion} illustrates this process for a contract with three functions.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+  node distance=0.6cm and 1.8cm,
+  box/.style={draw, rounded corners, minimum width=3.2cm, minimum height=0.7cm, align=center, font=\small\ttfamily},
+  arrow/.style={->, thick, >=stealth},
+  label/.style={font=\small\itshape, text=gray}
+]
+  % Source rule
+  \node[box, fill=blue!8, minimum width=5.5cm, minimum height=1.4cm] (rule) {
+    \begin{tabular}{l}
+    method f;\\
+    require !funcCompare(f, "transfer");\\
+    f(); assert balance > 0;
+    \end{tabular}
+  };
+  \node[label, above=0.08cm of rule] {Parametric Rule};
+
+  % Expansion targets
+  \node[box, fill=green!10, below left=1.2cm and 0.4cm of rule] (approve) {approve()};
+  \node[box, fill=green!10, below=1.2cm of rule] (mint) {mint()};
+  \node[box, fill=red!10, below right=1.2cm and 0.4cm of rule] (transfer) {transfer()};
+
+  \draw[arrow] (rule) -- (approve) node[midway, left, label] {eval: true};
+  \draw[arrow] (rule) -- (mint) node[midway, right, xshift=-4pt, label] {eval: true};
+  \draw[arrow, dashed, red!60] (rule) -- (transfer) node[midway, right, label] {eval: false};
+
+  % Annotations
+  \node[box, fill=yellow!12, below=0.5cm of approve, minimum width=3.6cm] (ann1) {Post(balance > 0)};
+  \node[box, fill=yellow!12, below=0.5cm of mint, minimum width=3.6cm] (ann2) {Post(balance > 0)};
+  \node[font=\small\color{red!60}, below=0.5cm of transfer] (skip) {(skipped)};
+
+  \draw[arrow] (approve) -- (ann1);
+  \draw[arrow] (mint) -- (ann2);
+\end{tikzpicture}
+\caption{Parametric rule expansion. The rule applies \texttt{postcondition balance > 0} to all public functions except \texttt{transfer}, for which the precondition evaluates to \texttt{false}.}
+\label{fig:parametric-expansion}
+\end{figure}
+
+\subsubsection{Event Annotations}
+
+In addition to function-level properties, \textsc{solcspec} can specify conditions around event emissions, as shown in Table~\ref{tab:event-ann}.
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.5}
+\caption{Translation rules for event annotations.}
+\label{tab:event-ann}
+\begin{tabular}{|p{6cm}|p{6cm}|}
+\hline
+\textbf{Specification Code} & \textbf{Generated Annotation} \\ \hline
+\begin{tabular}[t]{@{}l@{}}
+$\textbf{require } P;$\\
+$\textbf{emits } e(\ldots);$\\
+$\textbf{assert } Q;$
+\end{tabular}
+&
+\begin{tabular}[t]{@{}l@{}}
+\texttt{/// @notice precondition P}\\
+\texttt{/// @notice postcondition Q}\\
+\texttt{event e(...) \{...\}}
+\end{tabular}
+\\ \hline
+\begin{tabular}[t]{@{}l@{}}
+$f();$\\
+$\textbf{assert\_emit } e;$
+\end{tabular}
+&
+\begin{tabular}[t]{@{}l@{}}
+\texttt{/// @notice emits e}\\
+\texttt{function f(...) \{...\}}
+\end{tabular}
+\\ \hline
+\end{tabular}
+\end{table}
+
+\noindent For event pre/postconditions, state variable references in the precondition are wrapped with \texttt{\_\_verifier\_before\_}$\langle\tau\rangle$ (rather than \texttt{\_\_verifier\_old\_}$\langle\tau\rangle$ used for function postconditions), as event conditions reference the state immediately before the event emission point, which may differ from the function entry state.
+
+Figure~\ref{fig:event-example} illustrates Table~\ref{tab:event-ann} with a concrete registry contract. The rule declares that the \texttt{new\_entry} event is only emitted when the entry for the emitting address has not yet been set, and that after emission the entry is recorded correctly.
+
+\begin{figure}[h]
+\centering
+\begin{minipage}{0.47\textwidth}
+\begin{lstlisting}[style=solstyle]
+variables {
+    mapping(address=>Entry) entries;
+}
+rule generalSpec(int x) {
+    address a;
+    // event emission path
+    require(!entries[a].set);
+    emits new_entry(a, x);
+    assert entries[a].set
+       && entries[a].data == x;
+}
+\end{lstlisting}
+\end{minipage}
+\hfill
+\begin{minipage}{0.47\textwidth}
+\begin{lstlisting}[style=solstyle]
+/// @notice precondition
+///   (!entries[at].set)
+/// @notice postcondition
+///   entries[at].set
+///   && entries[at].data == value
+event new_entry(address at, int value);
+\end{lstlisting}
+\end{minipage}
+\caption{Event annotation generation (Row~1 of Table~\ref{tab:event-ann}): the precondition and postcondition are attached to the \texttt{new\_entry} event declaration, not to any function.}
+\label{fig:event-example}
+\end{figure}
+
+\subsubsection{Invariant Translation}
+
+Invariants have a simpler structure: they contain only \texttt{define} and \texttt{assert} statements, with no function calls permitted. The translation is shown in Table~\ref{tab:invariant}.
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.5}
+\caption{Translation rule for invariants.}
+\label{tab:invariant}
+\begin{tabular}{|p{6cm}|p{6cm}|}
+\hline
+\textbf{Specification Code} & \textbf{Generated Annotation (before contract)} \\ \hline
+\begin{tabular}[t]{@{}l@{}}
+\texttt{invariant InvName \{}\\
+\texttt{\ \ assert P;}\\
+\texttt{\}}
+\end{tabular}
+&
+\begin{tabular}[t]{@{}l@{}}
+\texttt{/// @notice invariant P[\(\sigma\)]}\\
+\texttt{contract C \{ ... \}}
+\end{tabular}
+\\ \hline
+\end{tabular}
+\end{table}
+
+\noindent where $P[\sigma]$ denotes $P$ with ghost variables substituted by their defined values. Invariant annotations are inserted before the contract declaration, making them apply to all functions in $c$. No oldification is needed because invariants express properties that must hold at both entry and exit of every function.
+
+Figure~\ref{fig:invariant-example} shows a concrete example from an ERC20 token contract. The invariant states that the \texttt{totalSupply} variable must always equal the sum of all individual balances. \textsc{solcspec} translates the high-level \texttt{balances.sum} shorthand into the \textsc{solc-verify} built-in \texttt{\_\_verifier\_sum\_uint}.
+
+\begin{figure}[h]
+\centering
+\begin{minipage}{0.47\textwidth}
+\begin{lstlisting}[style=solstyle]
+variables {
+    uint256 totalSupply;
+    mapping(address => uint256) balances;
+}
+invariant totalEqualSumBalances {
+    assert totalSupply == balances.sum;
+}
+\end{lstlisting}
+\end{minipage}
+\hfill
+\begin{minipage}{0.47\textwidth}
+\begin{lstlisting}[style=solstyle]
+/// @notice invariant
+///   totalSupply
+///   == __verifier_sum_uint(balances)
+contract BecToken { ... }
+\end{lstlisting}
+\end{minipage}
+\caption{Invariant translation (Table~\ref{tab:invariant}): the \texttt{totalEqualSumBalances} invariant is emitted as a single \texttt{/// @notice invariant} comment placed immediately before the contract declaration, causing \textsc{solc-verify} to check the property at the entry and exit of every function in the contract.}
+\label{fig:invariant-example}
+\end{figure}
+
+\subsubsection{Modifies Propagation}
+
+When a rule asserts that function $f$ modifies variable $x$, the translator propagates this constraint through the call graph. If $f$ calls $g$ internally and $g$ writes to $x$ (determined via static analysis with Slither), then the \texttt{modifies} annotation is propagated to $g$ as well. Crucially, the conditional guard $P$ is \emph{stripped} for callees: the condition under which the modification is allowed applies only at the call site, and a conservative unconditional \texttt{modifies} is used for each callee.
+
+\begin{figure}[h]
+\centering
+\begin{minipage}{0.47\textwidth}
+\begin{lstlisting}[style=solstyle]
+variables { int x; int y; }
+
+rule modifyXandY(int n) {
+    add(n);
+    assert_modify x if n > 0;
+    assert_modify y if n > 0;
+}
+\end{lstlisting}
+\end{minipage}
+\hfill
+\begin{minipage}{0.47\textwidth}
+\begin{lstlisting}[language=Solidity,basicstyle=\small\ttfamily]
+contract C {
+  int x; int y;
+
+  // writes x; called by add()
+  function add_to_x(int n) internal {
+    x = x + n;
+  }
+
+  // writes y; calls add_to_x
+  function add(int n) public {
+    add_to_x(n);
+    while (y < x) { y = y + 1; }
+  }
+}
+\end{lstlisting}
+\end{minipage}
+\caption{Modifies propagation example. Left: the \textsc{solcspec} rule asserts that \texttt{add} may modify \texttt{x} and \texttt{y} only when \texttt{n > 0}. Right: the Solidity contract shows that \texttt{add} writes \texttt{y} directly and also calls the internal helper \texttt{add\_to\_x}, which writes \texttt{x}.}
+\label{fig:modifies-spec}
+\end{figure}
+
+Figure~\ref{fig:modifies-spec} shows the rule and contract for a simple counter. The rule specifies conditional modifies on function \texttt{add}: it may modify both \texttt{x} and \texttt{y} only when \texttt{n > 0}. Because \texttt{add} internally calls \texttt{add\_to\_x}, which directly writes \texttt{x}, the translator must also annotate \texttt{add\_to\_x}.
+
+The propagation algorithm proceeds as follows. Slither's static analysis builds a call graph showing that \texttt{add} calls \texttt{add\_to\_x}, and a write-set showing that \texttt{add} writes \texttt{y} while \texttt{add\_to\_x} writes \texttt{x}. For the \texttt{assert\_modify x if n > 0} constraint, the algorithm checks every callee of \texttt{add} in the call graph: since \texttt{add\_to\_x} writes \texttt{x}, the \texttt{modifies x} annotation is propagated to it, but with the guard \texttt{n > 0} stripped. For \texttt{assert\_modify y if n > 0}, \texttt{add\_to\_x} does \emph{not} write \texttt{y}, so the annotation is not propagated.
+
+The resulting annotations are shown in Figure~\ref{fig:modifies-output}. The \texttt{add} function receives conditional modifies annotations exactly as written in the spec. The internal helper \texttt{add\_to\_x} receives an unconditional \texttt{modifies x} annotation, allowing \textsc{solc-verify} to verify the property soundly even in the presence of internal calls.
+
+\begin{figure}[h]
+\centering
+\begin{lstlisting}[style=solstyle]
+/// @notice invariant x == y
+contract C {
+    int x; int y;
+
+    /// @notice modifies x
+    function add_to_x(int n) internal { x = x + n; }
+
+    /// @notice precondition block.timestamp >= 0
+    /// @notice precondition block.number >= 0
+    /// @notice modifies x if n > 0
+    /// @notice modifies y if n > 0
+    function add(int n) public {
+        add_to_x(n);
+        while (y < x) { y = y + 1; }
+    }
+}
+\end{lstlisting}
+\caption{Generated annotations for the counter contract in Figure~\ref{fig:modifies-spec}. The conditional \texttt{modifies x if n > 0} and \texttt{modifies y if n > 0} are placed on \texttt{add}; the propagated unconditional \texttt{modifies x} is placed on \texttt{add\_to\_x}. Note that the guard \texttt{n > 0} is dropped for the callee.}
+\label{fig:modifies-output}
+\end{figure}
+
+\subsubsection{Logical Transformations}
+
+Two additional logical transformations are applied before rendering annotations to text:
+
+\begin{itemize}
+    \item \textbf{Implication elimination}: Expressions of the form $P \Rightarrow Q$ are rewritten to $\neg P \lor Q$, and biconditionals $P \Leftrightarrow Q$ to $(P \wedge Q) \lor (\neg P \wedge \neg Q)$, since \textsc{solc-verify}'s annotation syntax does not support arrow operators.
+    
+    \item \textbf{Negation normalization}: Negation is pushed inward using De Morgan's laws ($\neg(P \wedge Q) = \neg P \lor \neg Q$), operator inversion ($\neg(x < y) = x \geq y$), literal simplification ($\neg\texttt{true} = \texttt{false}$), and quantifier duality ($\neg\forall x.\, P = \exists x.\, \neg P$).
+\end{itemize}
+
+This parallelization strategy allows the back-end \textsc{solc-verify} to efficiently verify each rule's property individually under the assumption of all defined global invariants.
+
+\subsubsection{End-to-End Pipeline}
+
+Figure~\ref{fig:pipeline} summarizes the complete translation pipeline from a \textsc{solcspec} specification to annotated Solidity files.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+  node distance=0.5cm,
+  box/.style={draw, rounded corners, minimum width=4.5cm, minimum height=0.65cm, align=center, font=\small},
+  io/.style={draw, rounded corners, minimum width=3.8cm, minimum height=0.65cm, align=center, font=\small, fill=gray!10},
+  arrow/.style={->, thick, >=stealth},
+  phase/.style={font=\footnotesize\bfseries, text=blue!70!black}
+]
+  \node[io] (spec) {\texttt{.spec} file};
+  \node[io, right=2.5cm of spec] (sol) {\texttt{.sol} file};
+
+  \node[box, below=0.7cm of spec, fill=blue!8] (parse) {1. Parse spec $\to$ AST $\to$ IR};
+
+  \node[box, right=2.0cm of parse, fill=blue!8] (symbols) {2. Build Solidity symbols};
+
+  \node[box, below=0.5cm of symbols, fill=orange!10] (paths) {3. Enumerate execution paths};
+
+  \node[box, left=2.0cm of paths, fill=orange!10] (extract) {4. Extract Pre/Post/Modify/Emit per path};
+
+  \node[box, below=0.5cm of extract, fill=orange!10] (resolve) {5. Evaluate parametric calls, resolve ghost vars};
+
+  \node[box, right=1.5cm of resolve, fill=green!10] (quantify) {6. Quantify free variables};
+
+  \node[box, below=0.5cm of quantify, fill=green!10] (propagate) {7. Propagate modifies through call graph};
+
+  \node[box, left=1.5cm of propagate, fill=green!10] (rewrite) {8. Remove $\Rightarrow$/$\Leftrightarrow$, render to text};
+
+  \node[io, below=0.5cm of rewrite] (out) {Annotated \texttt{.sol} files};
+
+  \draw[arrow] (spec) -- (parse);
+  \draw[arrow] (sol) -- (parse);
+  \draw[arrow] (parse) -- (symbols);
+  \draw[arrow] (symbols) -- (paths);
+  \draw[arrow] (paths) -- (extract);
+  \draw[arrow] (extract) -- (resolve);
+  \draw[arrow] (resolve) -- (quantify);
+  \draw[arrow] (quantify) -- (propagate);
+  \draw[arrow] (propagate) -- (rewrite);
+  \draw[arrow] (rewrite) -- (out);
+
+  % Phase labels
+  \node[phase, left=0.15cm of parse] {Parsing};
+  \node[phase, right=0.15cm of paths] {Analysis};
+  \node[phase, right=0.15cm of quantify] {Synthesis};
+\end{tikzpicture}
+\caption{The \textsc{solcspec} translation pipeline. Parsing builds the intermediate representation; analysis extracts verification conditions per execution path; synthesis resolves variables, adds quantifiers, and emits annotated Solidity files.}
+\label{fig:pipeline}
+\end{figure}
+
+\subsubsection{Worked Example}
+
+We illustrate the complete translation process using a concrete rule from an ERC20 specification. 
+Figure~\ref{fig:transfer-rule} shows the original \textsc{solcspec} rule for the \texttt{transfer} function, while Figure~\ref{fig:transfer-ann} presents the corresponding \textsc{solc-verify} annotations generated by our translator.
+
+\begin{figure}[t]
+\centering
+\begin{minipage}{0.47\textwidth}
+\begin{lstlisting}[style=solstyle]
+variables {
+    mapping(address => uint) _balances;
+}
+rule transferSpec(address recipient, uint amount) {
+    uint balance_before = _balances[msg.sender];
+    uint balance_recip  = _balances[recipient];
+    transfer(recipient, amount);
+    assert recipient != msg.sender =>
+        _balances[msg.sender] == balance_before - amount;
+    assert recipient != msg.sender =>
+        _balances[recipient] == balance_recip + amount;
+}
+\end{lstlisting}
+\caption{ERC20 transfer rule in \textsc{solcspec}}
+\label{fig:transfer-rule}
+\end{minipage}
+\hfill
+\begin{minipage}{0.47\textwidth}
+\begin{lstlisting}[style=solstyle]
+/// @notice postcondition recipient == msg.sender ||
+///   _balances[msg.sender] ==
+///   __verifier_old_uint(_balances[msg.sender]) - amount
+/// @notice postcondition recipient == msg.sender ||
+///   _balances[recipient] ==
+///   __verifier_old_uint(_balances[recipient]) + amount
+function transfer(address recipient, uint256 amount) ...
+\end{lstlisting}
+\caption{Generated annotations for \texttt{transfer}}
+\label{fig:transfer-ann}
+\end{minipage}
+\end{figure}
+
+\noindent \textbf{Step 1 (Variable tracking).} 
+From the variable declarations in the rule (Figure~\ref{fig:transfer-rule}), the translator constructs the value map:
+\[
+\sigma = \bigl\{\texttt{balance\_before} \mapsto \texttt{\_balances[msg.sender]},\;\; 
+\texttt{balance\_recip} \mapsto \texttt{\_balances[recipient]}\bigr\}
+\]
+
+\noindent \textbf{Step 2 (Argument binding).} 
+The call \texttt{transfer(recipient, amount)} in the rule is matched with the corresponding Solidity function. 
+Rule parameters are bound to the function parameters, generating parameter equality constraints such as $\texttt{recipient} == \texttt{recipient}$ and $\texttt{amount} == \texttt{amount}$. These trivial equalities are removed during simplification.
+
+\noindent \textbf{Step 3 (Ghost substitution and oldification).} 
+Ghost variables defined before the function call are substituted with their corresponding pre-state values in postconditions. 
+For example, since \texttt{balance\_before} is defined as \texttt{\_balances[msg.sender]} before the call (Figure~\ref{fig:transfer-rule}), it is translated to:
+\[
+\texttt{balance\_before} \;\longmapsto\; 
+\texttt{\_\_verifier\_old\_uint(\_balances[msg.sender])}
+\]
+
+\noindent \textbf{Step 4 (Annotation generation).} 
+Finally, the resulting postconditions are emitted as \textsc{solc-verify} annotations placed before the \texttt{transfer} function declaration, as illustrated in Figure~\ref{fig:transfer-ann}.
+
+\noindent In addition, type-based safety conditions such as 
+\texttt{\_balances[msg.sender] >= 0} are automatically introduced for all \texttt{uint}-typed state variables by the verifier infrastructure, independent of the rule specification.
+
+\subsubsection{Automatic Type-Based Preconditions}
+\label{sec:auto-preconditions}
+
+In addition to the preconditions derived from specification rules, \textsc{solcspec} automatically generates \emph{type-based preconditions} that encode the semantic constraints of Solidity's type system. These preconditions are injected into every public or external function (and the constructor, if present) prior to any rule-specific annotations, ensuring that the verification environment faithfully models the runtime invariants maintained by the EVM.
+
+The automatic precondition generation proceeds per-function as follows.
+
+\paragraph{Unsigned integer non-negativity.}
+For every state variable whose type contains \texttt{uint} (including nested mappings and arrays), a non-negativity precondition is generated. The generation is recursive over the type structure:
+
+\begin{itemize}
+    \item \textbf{Elementary} \texttt{uint$k$} variable $x$: \quad $x \geq 0$
+    \item \textbf{Mapping} \texttt{mapping($K \Rightarrow V$)} variable $x$: \quad $\forall\, (K\; v).\; \mathit{preconds}(x[v], V)$
+    \item \textbf{Array} \texttt{$V$[]} variable $x$: \quad $\texttt{property}(x)\;(i)\; \mathit{preconds}(x[i], V)$
+\end{itemize}
+
+\noindent For instance, a doubly-nested mapping \texttt{mapping(address => mapping(address => uint256)) \_allowances} produces:
+\begin{center}
+\texttt{forall (address v$_0$) forall (address v$_1$) \_allowances[v$_0$][v$_1$] >= 0}
+\end{center}
+
+Similarly, for each function parameter of type \texttt{uint$k$}, a precondition $\textit{param} \geq 0$ is added.
+
+\paragraph{Blockchain environment constraints.}
+Two preconditions model the non-negative nature of blockchain-level variables, applied to every function:
+\[
+\texttt{block.timestamp} \geq 0 \qquad\qquad \texttt{block.number} \geq 0
+\]
+
+\paragraph{Payable function constraints.}
+For functions marked \texttt{payable}, three additional preconditions are generated to model the Ether transfer semantics:
+\begin{align*}
+&\texttt{msg.value} \geq 0 \\
+&\texttt{address(this).balance} \geq 0 \\
+&\forall\, (\texttt{address}\ a).\; a\texttt{.balance} \geq 0
+\end{align*}
+
+\paragraph{Merging with rule-specific preconditions.}
+During annotation emission, the automatic preconditions are \emph{prepended} to the rule-derived preconditions for each function. Duplicate preconditions are eliminated. Figure~\ref{fig:auto-precond-example} shows the resulting annotations for a \texttt{transfer} function: the first five lines are auto-generated type-based preconditions, followed by the rule-derived postconditions from the specification.
+
+\begin{figure}[h]
+\centering
+\begin{lstlisting}[style=solstyle]
+/// @notice precondition forall (address v0) _balances[v0] >= 0
+/// @notice precondition forall (address v0) forall (address v1) _allowances[v0][v1] >= 0
+/// @notice precondition _totalSupply >= 0
+/// @notice precondition block.timestamp >= 0
+/// @notice precondition block.number >= 0
+/// @notice precondition amount >= 0
+/// @notice postcondition recipient == msg.sender || _balances[msg.sender] == __verifier_old_uint(...) - amount
+/// @notice postcondition recipient == msg.sender || _balances[recipient] == __verifier_old_uint(...) + amount
+function transfer(address recipient, uint256 amount) public returns (bool) { ... }
+\end{lstlisting}
+\caption{Combined annotations for \texttt{transfer}. Lines 1--6 are auto-generated type-based preconditions; lines 7--8 are rule-derived postconditions. Auto-preconditions establish the typing environment; rule postconditions encode the functional specification.}
+\label{fig:auto-precond-example}
+\end{figure}
+
+These automatic preconditions serve two purposes. First, they compensate for the gap between Solidity's unsigned integer semantics and the unbounded integer model used by the Boogie verifier backend: without asserting $x \geq 0$, the verifier could explore infeasible negative-valued executions and produce spurious counterexamples. Second, they ensure that blockchain environment variables and Ether balances satisfy the physical constraints of the EVM, preventing vacuously valid proofs that rely on impossible states such as negative timestamps or balances.
